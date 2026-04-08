@@ -22,14 +22,33 @@ export function ProfileForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Ici, vous ferez un fetch vers votre API FastAPI (Gateway)
-    // ex: await fetch('/api/profiles', { method: 'POST', body: JSON.stringify(formData) })
     
-    console.log("Données prêtes à être envoyées à l'API :", formData);
-    setIsSaved(true);
-    
-    // Fait disparaître le message de succès après 3 secondes
-    setTimeout(() => setIsSaved(false), 3000);
+    try {
+      // Envoi des données vers le service Kcal via la Gateway
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/kcal/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Adaptation des champs selon ce qu'attend votre API Kcal
+          age: formData.age,
+          weight: formData.weight,
+          height: formData.height,
+          gender: formData.gender,
+          activity_level: formData.activityLevel
+        })
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        console.log("Résultat du backend :", result);
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
+      } else {
+        console.error("Erreur de validation côté serveur");
+      }
+    } catch (error) {
+      console.error("Impossible de joindre l'API", error);
+    }
   };
 
   return (

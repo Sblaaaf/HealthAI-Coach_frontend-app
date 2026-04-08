@@ -10,22 +10,42 @@ const handler = NextAuth({
         password: { label: "Mot de passe", type: "password" }
       },
       async authorize(credentials) {
-        // TODO: Plus tard, faire un fetch() vers http://gateway_api:8000/login
-        // Pour l'instant, on simule une connexion réussie
-        if (credentials?.email === "master@healthai.com" && credentials?.password === "admin") {
-          return { id: "1", name: "Master", email: "master@healthai.com" }
+        try {
+          // Appel vers votre Gateway FastAPI qui redirigera vers le Auth Service
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: credentials?.email,
+              password: credentials?.password
+            })
+          });
+
+          const user = await res.json();
+
+          // Si le backend renvoie un succès (basé sur votre swagger)
+          if (res.ok && user.success) {
+            return { 
+              id: String(user.user_id), 
+              name: "Utilisateur", 
+              email: user.email 
+            };
+          }
+          return null; // Mot de passe incorrect
+        } catch (error) {
+          console.error("Erreur de connexion au backend:", error);
+          return null;
         }
-        return null // Échec de la connexion
       }
     })
   ],
   pages: {
-    signIn: '/login', // Indique à NextAuth d'utiliser notre interface personnalisée
+    signIn: '/login',
   },
   session: {
-    strategy: "jwt", // Utilisation des JSON Web Tokens
+    strategy: "jwt",
   },
-  secret: "votre_cle_secrete_tres_complexe", // À mettre dans un fichier .env plus tard
+  secret: process.env.NEXTAUTH_SECRET || "votre_cle_secrete_tres_complexe",
 })
 
 export { handler as GET, handler as POST }

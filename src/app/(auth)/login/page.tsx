@@ -1,9 +1,16 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity } from 'lucide-react'; // Icône SVG
+
+interface LoginResponse {
+  success: boolean;
+  message: string;
+  user_id?: number;
+  email?: string;
+  detail?: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,17 +24,46 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const response = await fetch('http://localhost:8004/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (result?.error) {
-      setError('Identifiants incorrects.');
+      const data: LoginResponse = await response.json();
+
+      // Vérifier si success est true
+      if (data.success === true) {
+        // Authentification réussie
+        localStorage.setItem('user_id', data.user_id?.toString() || '');
+        localStorage.setItem('email', data.email || '');
+        router.push('/dashboard'); // Redirection vers le tableau de bord
+      } else {
+        // Authentification échouée - utiliser le message detail si disponible
+        let errorMessage = 'Identifiants incorrects.';
+        
+        // Gérer les différents formats de détail d'erreur
+        if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (typeof data.detail === 'object' && data.detail.msg) {
+            // Format Pydantic error
+            errorMessage = data.detail.msg;
+          }
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+        
+        setError(errorMessage);
+      }
+    } catch (err) {
+      console.error('Erreur de connexion:', err);
+      setError('Erreur de connexion. Veuillez réessayer.');
+    } finally {
       setIsLoading(false);
-    } else {
-      router.push('/dashboard'); // Redirection vers le tableau de bord
     }
   };
 
