@@ -1,6 +1,7 @@
-export { default } from "next-auth/middleware"
+import { withAuth } from "next-auth/middleware";
+
+export default withAuth;
 
 export const config = {
-  // Définir les routes à protéger. Ici, tout ce qui se trouve dans /dashboard ou /parametres
   matcher: ["/dashboard/:path*", "/parametres/:path*", "/profils/:path*"]
-}
+};
